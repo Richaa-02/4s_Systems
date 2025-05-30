@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Request Status</title>
+</head>
+<body>
+    <h1>Update Status for Request #{{ req.id }}</h1>
+    <form method="POST">
+        <label>Status:</label>
+        <select name="status">
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="Rejected">Rejected</option>
+        </select><br><br>
+
+        <label>Comment:</label><br>
+        <textarea name="comment" rows="4" cols="50">{{ req.warehouse_comment }}</textarea><br><br>
+
+        <input type="submit" value="Update">
+    </form>
+</body>
+</html>

@@ -176,8 +176,19 @@ def sales_dashboard():
     inventory_rows = cursor.fetchall()
     inventory = [dict(row) for row in inventory_rows]
 
+    # 🔥 Added: Fetch resolved complaints
+    cursor.execute("SELECT * FROM complaints WHERE status = 'resolved'")
+    resolved_rows = cursor.fetchall()
+    resolved_complaints = [dict(row) for row in resolved_rows]
+
     conn.close()
-    return render_template('sales_dashboard.html', requests=requests, inventory=inventory)
+    return render_template(
+        'sales_dashboard.html',
+        requests=requests,
+        inventory=inventory,
+        resolved_complaints=resolved_complaints  # ✅ Pass to template
+    )
+
 
 
 #---------------------------------------------------------------------------------------------
@@ -250,6 +261,83 @@ def download_report():
                      download_name='sales_report.xlsx',
                      as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+#--------------------------------------------------------------------------------------------
+
+
+from flask import send_file, flash, redirect, url_for, session
+import matplotlib.pyplot as plt
+import pandas as pd
+from io import BytesIO
+import sqlite3
+
+@app.route('/sales_report_chart')
+def sales_report_chart():
+    if session.get('role') != 'sales':
+        return redirect(url_for('login'))
+
+    username = session['username']
+
+    conn = sqlite3.connect('database/4s.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Fetch request count per item for the current sales user
+    cursor.execute('''
+        SELECT item, COUNT(*) as request_count
+        FROM requests
+        WHERE created_by = ?
+        GROUP BY item
+    ''', (username,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    # Convert to DataFrame
+    df = pd.DataFrame(rows, columns=['item', 'request_count'])
+
+    if df.empty:
+        flash("No request data found to generate chart.", "warning")
+        return redirect(url_for('sales_dashboard'))
+
+    # Generate bar chart
+    # plt.figure(figsize=(10, 6))
+    # df.set_index('item')['request_count'].sort_values().plot(kind='barh', color='orange')
+    # plt.title("Number of Requests per Item")
+    # plt.xlabel("Request Count")
+    # plt.ylabel("Item")
+    # plt.tight_layout()
+
+    # plt.figure(figsize=(8, 8))
+    # df.set_index('item')['request_count'].sort_values().plot(
+    # kind='pie', autopct='%1.1f%%', startangle=140, colormap='tab20')
+    # plt.title("Request Distribution by Item")
+    # plt.ylabel("")  # Remove default y-label
+
+    # plt.figure(figsize=(10, 6))
+    # df.set_index('item')['request_count'].sort_values().plot(kind='barh', color='skyblue')
+    # plt.title("Number of Requests per Item")
+    # plt.xlabel("Request Count")
+    # plt.ylabel("Item")
+    # plt.tight_layout()
+    # plt.grid(axis='x', linestyle='--', alpha=0.7)
+
+    plt.figure(figsize=(10, 6))
+    df.set_index('item')['request_count'].sort_values().plot(kind='bar', color='skyblue')
+    plt.title("Number of Requests per Item")
+    plt.ylabel("Request Count")
+    plt.xlabel("Item")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+
+    # Return chart image
+    img = BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plt.clf()
+    return send_file(img, mimetype='image/png')
 
 
 @app.route('/edit_request/<int:request_id>', methods=['GET', 'POST'])
@@ -816,11 +904,137 @@ from openpyxl.chart import BarChart, Reference
 #--------------------------------support dashboard---------------------------------------------------
 
 
+# -------------------- Support Dashboard --------------------
+
+
+
+# At the top of your file (global variable)
+complaints = []  # This should be a list
+
+@app.route('/raise_complaint', methods=['GET', 'POST'])
+def raise_complaint():
+    if request.method == 'POST':
+        conn = sqlite3.connect('database/4s.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO complaints (customer_id, subject, description, created_at, status)
+            VALUES (?, ?, ?, ?, 'Open')
+        ''', (
+            request.form['customer_id'],
+            request.form['subject'],
+            request.form['description'],
+            datetime.now()
+        ))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('sales_dashboard'))
+    return render_template('raise_complaint.html')
+
+
+
 @app.route('/support_dashboard')
 def support_dashboard():
-    if session.get('role') != 'support':
-        return redirect(url_for('login'))
-    return render_template('support_dashboard.html')
+    conn = sqlite3.connect('database/4s.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM complaints WHERE status = 'Open'")
+    complaints = cursor.fetchall()
+    conn.close()
+    return render_template('support_dashboard.html', complaints=complaints)
+
+@app.route('/respond/<int:complaint_id>', methods=['GET', 'POST'])
+def respond_complaint(complaint_id):
+    conn = sqlite3.connect('database/4s.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM complaints WHERE id = ?", (complaint_id,))
+    complaint = cursor.fetchone()
+
+    if not complaint:
+        conn.close()
+        return "Complaint not found", 404
+
+    if request.method == 'POST':
+        cursor.execute('''
+            UPDATE complaints SET response = ?, resolved_at = ?, status = 'Resolved' WHERE id = ?
+        ''', (request.form['response'], datetime.now(), complaint_id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('support_dashboard'))
+
+    conn.close()
+    return render_template('respond_complaint.html', complaint=complaint)
+
+
+@app.route('/resolved_dashboard')
+def resolved_dashboard():
+    return render_template('resolved_dashboard.html', complaints=resolved_complaints)
+
+
+
+# @app.route('/support_dashboard')
+# def support_dashboard():
+#     if session.get('role') != 'support':
+#         return redirect(url_for('login'))
+
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+#     cursor.execute("SELECT * FROM requests")
+#     requests = cursor.fetchall()
+#     conn.close()
+
+#     return render_template('support_dashboard.html', requests=requests)
+
+# # -------------------- Update Request Status --------------------
+# @app.route('/update_status/<int:request_id>', methods=['GET', 'POST'])
+# def update_support_status(request_id):
+#     if session.get('role') != 'support':
+#         return redirect(url_for('login'))
+
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+
+#     if request.method == 'POST':
+#         new_status = request.form['status']
+#         comment = request.form['comment']
+#         updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+#         cursor.execute('''
+#             UPDATE requests
+#             SET status = ?, warehouse_comment = ?, updated_at = ?
+#             WHERE id = ?
+#         ''', (new_status, comment, updated_at, request_id))
+
+#         conn.commit()
+#         conn.close()
+#         return redirect(url_for('support_dashboard'))
+
+#     cursor.execute("SELECT * FROM requests WHERE id = ?", (request_id,))
+#     req = cursor.fetchone()
+#     conn.close()
+
+#     return render_template('update_support_status.html', req=req)
+
+# # -------------------- Mark as Completed --------------------
+# @app.route('/mark_completed/<int:request_id>')
+# def mark_completed(request_id):
+#     if session.get('role') != 'support':
+#         return redirect(url_for('login'))
+
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+
+#     cursor.execute('''
+#         UPDATE requests
+#         SET status = 'Completed', updated_at = ?
+#         WHERE id = ?
+#     ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), request_id))
+
+#     conn.commit()
+#     conn.close()
+#     return redirect(url_for('support_dashboard'))
+
 
 # -------------------- Logout --------------------
 @app.route('/logout')

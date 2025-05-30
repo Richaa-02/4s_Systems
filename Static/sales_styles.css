@@ -1,23 +1,24 @@
 body {
     margin: 0;
     padding: 0;
-    background: linear-gradient(to right, #89f7fe, #66a6ff);
+    background: linear-gradient(to right, #89f7fe, #66a6ff);  /* Same as login */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     min-height: 100vh;
 }
 
-/* Container box */
+/* Container card */
 .dashboard-box {
     background-color: #ffffff;
     padding: 30px 40px;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);  /* Soft shadow like login */
 }
 
-/* Section headers */
+/* Headings */
 .dashboard-box h3 {
-    color: #333;
+    color: #2c3e50;
     font-size: 24px;
+    font-weight: 600;
 }
 
 /* Table styles */
@@ -25,4 +26,55 @@ body {
     text-align: center;
     vertical-align: middle;
     font-size: 14px;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Buttons */
+.btn-info {
+    background-color: #4facfe;  /* Light blue */
+    border: none;
+    color: white;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.btn-info:hover {
+    background-color: #3c9ffb;
+}
+
+.btn-success {
+    background-color: #43e97b;  /* Vibrant green like login */
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.btn-success:hover {
+    background-color: #38d16e;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border: none;
+    border-radius: 6px;
+}
+
+.btn-danger {
+    background-color: #ff6b6b;
+    border: none;
+    border-radius: 6px;
+}
+
+.btn-danger:hover {
+    background-color: #e65050;
+}
+
+.badge {
+    font-size: 13px;
+    padding: 0.4em 0.6em;
+    border-radius: 8px;
 }

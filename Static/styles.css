@@ -3,14 +3,14 @@ body {
     margin: 0;
     padding: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(to right, #89f7fe, #66a6ff);
+    background: linear-gradient(to right, #667eea, #764ba2);
     height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-/* Login box container */
+/* Login box (no longer used if .glass-card is preferred) */
 .login-box {
     background-color: white;
     padding: 40px 30px;
