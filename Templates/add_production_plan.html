@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Add Production Plan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container mt-5">
+    <h3>Add New Production Plan</h3>
+    <form method="post" action="{{ url_for('add_production_plan') }}">
+        <div class="mb-3">
+            <label for="product_name" class="form-label">Product Name</label>
+            <input type="text" id="product_name" name="product_name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Quantity</label>
+            <input type="number" id="quantity" name="quantity" class="form-control" min="1" required>
+        </div>
+        <div class="mb-3">
+            <label for="schedule_date" class="form-label">Schedule Date</label>
+            <input type="date" id="schedule_date" name="schedule_date" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Plan</button>
+        <a href="{{ url_for('production_plans') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+</body>
+</html>

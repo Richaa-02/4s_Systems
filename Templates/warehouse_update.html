@@ -1,0 +1,55 @@
+<!-- templates/warehouse_update.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Request</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4">
+    <a href="/warehouse_dashboard" class="btn btn-secondary mb-3">← Back to Dashboard</a>
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white">
+            <h5>Update Request #{{ request['id'] }}</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Item:</strong> {{ request['item'] }}</p>
+            <p><strong>Quantity:</strong> {{ request['item_quantity'] }}</p>
+            <p><strong>Created By:</strong> {{ request['created_by'] }}</p>
+            <p><strong>Status:</strong> {{ request['status'] }}</p>
+
+            <form method="POST">
+                <!--<div class="mb-3">
+                    <label class="form-label">Warehouse Comment</label>
+                    <textarea name="warehouse_comment" class="form-control" rows="2">{{ request['warehouse_comment'] or '' }}</textarea>
+                </div>-->
+
+                <div class="mb-3">
+                    <label class="form-label">Tracking ID</label>
+                    <input type="text" name="tracking_id" class="form-control" value="{{ request['tracking_id'] or '' }}" readonly>
+                    <small class="text-muted">Auto-generated when fulfilled.</small>
+                </div>
+
+                <!--<div class="mb-3">
+                    <label class="form-label">Courier Name</label>
+                    <input type="text" name="courier_name" class="form-control" value="{{ request['courier_name'] or '' }}">
+                </div>-->
+
+                <div class="mb-3">
+                    <label class="form-label">Expected Delivery Date</label>
+                    <input type="date" name="delivery_date" class="form-control" value="{{ request['delivery_date'] or '' }}">
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <button name="action" value="fulfill" class="btn btn-success">✅ Fulfill</button>
+                    <button name="action" value="forward" class="btn btn-warning">➡️ Forward to Production</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to right, #89f7fe, #66a6ff);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+}
+
+/* Container box */
+.dashboard-box {
+    background-color: #ffffff;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Section headers */
+.dashboard-box h3 {
+    color: #333;
+    font-size: 24px;
+}
+
+/* Table styles */
+.table th, .table td {
+    text-align: center;
+    vertical-align: middle;
+    font-size: 14px;
+}

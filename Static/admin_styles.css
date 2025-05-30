@@ -1,0 +1,125 @@
+/* Admin Dashboard Styles */
+
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to right, #89f7fe, #66a6ff);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 40px;
+}
+
+/* Container box */
+.dashboard-box {
+    background-color: #ffffff;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    width: 95%;
+    max-width: 1100px;
+}
+
+/* Heading */
+.dashboard-box h2 {
+    text-align: center;
+    color: #333;
+    font-size: 28px;
+    margin-bottom: 30px;
+}
+
+/* Filter form */
+form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+form input[type="text"] {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 15px;
+    width: 220px;
+}
+
+form button,
+form .btn {
+    padding: 10px 18px;
+    background-color: #007bff;
+    border: none;
+    color: white;
+    font-size: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover,
+form .btn:hover {
+    background-color: #0056b3;
+}
+
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    font-size: 14px;
+}
+
+th {
+    background-color: #d6ebff;
+    color: #333;
+    text-transform: uppercase;
+}
+
+tr:hover {
+    background-color: #f5faff;
+}
+
+/* Action links */
+a.edit-btn,
+a.delete-btn {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    margin: 0 4px;
+}
+
+a.edit-btn {
+    background-color: #ffc107;
+    color: #333;
+}
+
+a.edit-btn:hover {
+    background-color: #e0a800;
+    color: white;
+}
+
+a.delete-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+a.delete-btn:hover {
+    background-color: #b02a37;
+}
