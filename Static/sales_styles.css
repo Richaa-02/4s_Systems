@@ -1,80 +1,54 @@
+/* Apply the same gradient background as login page */
 body {
+    background: linear-gradient(to right, #667eea, #764ba2);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    background: linear-gradient(to right, #89f7fe, #66a6ff);  /* Same as login */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: 100vh;
 }
 
-/* Container card */
-.dashboard-box {
-    background-color: #ffffff;
-    padding: 30px 40px;
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);  /* Soft shadow like login */
+/* Style main card containers to match login card */
+.container, .dashboard-section, .card, .table-container {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
 }
 
-/* Headings */
-.dashboard-box h3 {
-    color: #2c3e50;
-    font-size: 24px;
+/* Table look refinement */
+.table {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background-color: white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Consistent button styles like login form */
+.btn {
+    border-radius: 0.75rem;
+    font-weight: 500;
+    padding: 0.5rem 1.2rem;
+}
+
+/* Top header spacing and style */
+h2, h3 {
     font-weight: 600;
-}
-
-/* Table styles */
-.table th, .table td {
-    text-align: center;
-    vertical-align: middle;
-    font-size: 14px;
-}
-
-.table thead th {
-    background-color: #f8f9fa;
     color: #333;
 }
 
-/* Buttons */
-.btn-info {
-    background-color: #4facfe;  /* Light blue */
-    border: none;
-    color: white;
-    border-radius: 8px;
-    font-weight: 500;
-}
-
-.btn-info:hover {
-    background-color: #3c9ffb;
-}
-
-.btn-success {
-    background-color: #43e97b;  /* Vibrant green like login */
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-}
-
-.btn-success:hover {
-    background-color: #38d16e;
-}
-
-.btn-warning {
-    background-color: #ffc107;
-    border: none;
-    border-radius: 6px;
-}
-
+/* Match logout button to login blue button feel */
 .btn-danger {
-    background-color: #ff6b6b;
-    border: none;
-    border-radius: 6px;
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+    color: white;
 }
 
-.btn-danger:hover {
-    background-color: #e65050;
+/* Harmonize action buttons */
+.btn-warning, .btn-danger {
+    border-radius: 0.5rem;
 }
 
-.badge {
-    font-size: 13px;
-    padding: 0.4em 0.6em;
-    border-radius: 8px;
+/* Optional: improve layout spacing */
+section {
+    padding: 1rem 0;
 }

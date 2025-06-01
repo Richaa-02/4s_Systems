@@ -7,8 +7,7 @@ from io import StringIO
 from flask import make_response
 import pandas as pd
 from io import BytesIO
-
-
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'your_super_secret_key'
@@ -19,7 +18,9 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# -------------------- Login --------------------
+# ----------------------------------- Login ---------------------------------------------------
+
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     error = None
@@ -45,7 +46,10 @@ def login():
             error = 'Invalid credentials. Please try again.'
     return render_template('login.html', error=error)
 
-# -------------------- Admin Dashboard --------------------
+
+# --------------------------------- Admin Dashboard -----------------------------------------------
+
+
 @app.route('/admin/dashboard')
 def admin_dashboard():
     if session.get('role') != 'admin':
@@ -72,6 +76,10 @@ def admin_dashboard():
 
     return render_template('admin_dashboard.html', users=users)
 
+
+#--------------------------------------admin add user------------------------------------------------
+
+
 @app.route('/admin/add_user', methods=['GET', 'POST'])
 def add_user():
     if session.get('role') != 'admin':
@@ -95,6 +103,8 @@ def add_user():
         return redirect(url_for('admin_dashboard'))
 
     return render_template('add_user.html')
+
+#------------------------------admin edit user----------------------------------------------
 
 @app.route('/admin/edit_user/<int:user_id>', methods=['GET', 'POST'])
 def edit_user(user_id):
@@ -138,6 +148,9 @@ def edit_user(user_id):
     conn.close()
     return render_template('edit_user.html', user=user) if user else ("User not found", 404)
 
+#-----------------------------------admin delete user---------------------------------------------  
+
+
 @app.route('/admin/delete/<int:user_id>')
 def delete_user(user_id):
     if session.get('role') != 'admin':
@@ -149,7 +162,9 @@ def delete_user(user_id):
     conn.close()
     return redirect(url_for('admin_dashboard'))
 
-# -------------------- Sales Executive Dashboard --------------------
+
+# ------------------------------ Sales Executive Dashboard ------------------------------------
+
 @app.route('/sales_dashboard')
 def sales_dashboard():
     if session.get('role') != 'sales':
@@ -177,9 +192,10 @@ def sales_dashboard():
     inventory = [dict(row) for row in inventory_rows]
 
     # 🔥 Added: Fetch resolved complaints
-    cursor.execute("SELECT * FROM complaints WHERE status = 'resolved'")
+    cursor.execute("SELECT * FROM complaints")
     resolved_rows = cursor.fetchall()
     resolved_complaints = [dict(row) for row in resolved_rows]
+    print("Resolved Complaints:", resolved_complaints)  # Debug print
 
     conn.close()
     return render_template(
@@ -191,7 +207,7 @@ def sales_dashboard():
 
 
 
-#---------------------------------------------------------------------------------------------
+#---------------------------------------raise request-------------------------------------------------
 
 from uuid import uuid4
 
@@ -300,27 +316,6 @@ def sales_report_chart():
         flash("No request data found to generate chart.", "warning")
         return redirect(url_for('sales_dashboard'))
 
-    # Generate bar chart
-    # plt.figure(figsize=(10, 6))
-    # df.set_index('item')['request_count'].sort_values().plot(kind='barh', color='orange')
-    # plt.title("Number of Requests per Item")
-    # plt.xlabel("Request Count")
-    # plt.ylabel("Item")
-    # plt.tight_layout()
-
-    # plt.figure(figsize=(8, 8))
-    # df.set_index('item')['request_count'].sort_values().plot(
-    # kind='pie', autopct='%1.1f%%', startangle=140, colormap='tab20')
-    # plt.title("Request Distribution by Item")
-    # plt.ylabel("")  # Remove default y-label
-
-    # plt.figure(figsize=(10, 6))
-    # df.set_index('item')['request_count'].sort_values().plot(kind='barh', color='skyblue')
-    # plt.title("Number of Requests per Item")
-    # plt.xlabel("Request Count")
-    # plt.ylabel("Item")
-    # plt.tight_layout()
-    # plt.grid(axis='x', linestyle='--', alpha=0.7)
 
     plt.figure(figsize=(10, 6))
     df.set_index('item')['request_count'].sort_values().plot(kind='bar', color='skyblue')
@@ -338,6 +333,8 @@ def sales_report_chart():
     img.seek(0)
     plt.clf()
     return send_file(img, mimetype='image/png')
+
+# -------------------------------------- Edit Requests ------------------------------------------------
 
 
 @app.route('/edit_request/<int:request_id>', methods=['GET', 'POST'])
@@ -370,7 +367,7 @@ def edit_request(request_id):
     conn.close()
     return render_template('edit_request.html', request=request_data)
 
-
+#--------------------------------------- Delete Requests --------------------------------
 
 
 @app.route('/delete_request/<int:request_id>')
@@ -386,8 +383,12 @@ def delete_request(request_id):
     flash('Request deleted successfully!', 'success')
     return redirect(url_for('sales_dashboard'))
 
-# -------------------- Warehouse Officer Dashboard --------------------
+# ------------------------------ Warehouse Officer Dashboard -----------------------------------------
 
+
+from flask import Flask, render_template, request, redirect, session
+from datetime import datetime, timedelta
+import sqlite3
 
 @app.route('/warehouse_dashboard', methods=['GET', 'POST'])
 def warehouse_dashboard():
@@ -428,22 +429,31 @@ def warehouse_dashboard():
         ''')
 
     requests_raw = c.fetchall()
-
     updated_requests = []
+
     for row in requests_raw:
         item = row['item']
         quantity_needed = row['item_quantity']
 
         c.execute("SELECT item_quantity FROM warehouse_inventory WHERE item = ?", (item,))
         inventory = c.fetchone()
-        stock_status = "Yes" if inventory and inventory['item_quantity'] >= quantity_needed else "No"
+        stock_status = inventory and inventory['item_quantity'] >= quantity_needed
 
         row_dict = dict(row)
         row_dict['stock_available'] = stock_status
-        #row_dict['customer_id'] = row.get('customer_id')
-        #row_dict['customer_name'] = row.get('customer_name')
         row_dict['customer_id'] = row['customer_id']
         row_dict['customer_name'] = row['customer_name']
+
+        # SLA: parse created_at and compute SLA deadline
+        created_at = datetime.strptime(row['created_at'], "%Y-%m-%d %H:%M:%S")
+        row_dict['created_at_dt'] = created_at
+        row_dict['sla_status'] = "Breached"
+
+        now = datetime.now()
+        if now <= created_at + timedelta(hours=2):
+            row_dict['sla_status'] = "On Time"
+        elif now <= created_at + timedelta(hours=2, minutes=30):
+            row_dict['sla_status'] = "Warning"
 
         updated_requests.append(row_dict)
 
@@ -461,9 +471,11 @@ def warehouse_dashboard():
         search_query=search_query,
         status_filter=status_filter,
         forwarded_count=forwarded_count,
-        forwarded_view=False
+        forwarded_view=False,
+        current_time=datetime.now()
     )
-# ------------------- Update Request -------------------
+
+# ---------------------warehouse Update Request ----------------------------------------------
 
 
 @app.route('/warehouse/update/<int:request_id>', methods=['GET', 'POST'])
@@ -516,7 +528,7 @@ def update_request_warehouse(request_id):
                     stock_available = 'Yes'
                 WHERE id = ?
             """, ( generated_tracking_id, delivery_date, now, request_id))
-            flash('Request fulfilled automatically. Stock was available.', 'success')
+            flash('Request Fulfilled automatically. Stock was available.', 'success')
         else:
             # ❌ Stock not available — forward
             c.execute("""
@@ -541,11 +553,31 @@ def update_request_warehouse(request_id):
     conn.close()
     return render_template('warehouse_update.html', request=request_data)
 
+#--------------------------------warehouse delete request---------------------------------------------
 
+@app.route('/warehouse/delete/<int:request_id>', methods=['POST'])
+def delete_shipped_request(request_id):
+    if 'username' not in session or session['role'] != 'warehouse':
+        return redirect('/login')
 
+    conn = sqlite3.connect('database/4s.db')
+    c = conn.cursor()
 
+    # Check if the request is shipped
+    c.execute("SELECT shipment_status FROM requests WHERE id = ?", (request_id,))
+    req = c.fetchone()
 
-# ------------------- Warehouse Stock -------------------
+    if req and req[0] == 'Shipped':
+        c.execute("DELETE FROM requests WHERE id = ?", (request_id,))
+        conn.commit()
+        flash("Shipped request deleted successfully.", "success")
+    else:
+        flash("Request is not shipped or doesn't exist.", "danger")
+
+    conn.close()
+    return redirect(url_for('warehouse_dashboard'))
+
+# -------------------------- Warehouse Stock -------------------------------------------
 
 @app.route('/warehouse_stock', methods=['GET', 'POST'])
 def warehouse_stock():
@@ -576,6 +608,7 @@ def warehouse_stock():
     conn.close()
     return render_template('warehouse_stock.html', stock=stock_data)
 
+#---------------------------- Warehouse Forwarded Requests ---------------------------------------------
 
 @app.route('/warehouse_forwarded')
 def warehouse_forwarded():
@@ -600,9 +633,31 @@ def warehouse_forwarded():
     conn.close()
     return render_template('warehouse_forwarded.html', requests=updated_requests)
 
+#---------------------------- Delete Forwarded Requests ---------------------------------------------
+
+@app.route('/warehouse_forwarded/delete/<int:request_id>', methods=['POST'])
+def delete_forwarded_shipped_request(request_id):
+    if 'username' not in session or session['role'] != 'warehouse':
+        return redirect('/login')
+
+    conn = sqlite3.connect('database/4s.db')
+    c = conn.cursor()
+
+    c.execute("SELECT status FROM requests WHERE id = ?", (request_id,))
+    req = c.fetchone()
+
+    if req and req[0] == 'Fulfilled':
+        c.execute("DELETE FROM requests WHERE id = ?", (request_id,))
+        conn.commit()
+        flash("Shipped forwarded request deleted successfully.", "success")
+    else:
+        flash("Request is not shipped or doesn't exist.", "danger")
+
+    conn.close()
+    return redirect(url_for('warehouse_forwarded'))
 
 
-#--------------------report-------------------------------------
+#---------------------------------------warehouse report----------------------------------------------------
 
 @app.route('/download_csv')
 def download_csv():
@@ -630,7 +685,7 @@ def download_csv():
     return response
 
 
-# --- Production Planner Dashboard --------------------------------
+# ------------------------------- Production Planner Dashboard --------------------------------
 
 @app.route('/planner/dashboard')
 def planner_dashboard():
@@ -689,95 +744,51 @@ def planner_dashboard():
     conn.close()
     return render_template('planner_request.html', requests=updated_requests)
 
+#---------------------------------------planner report----------------------------------------------------
 
+@app.route('/planner/report')
+def report():
+    if session.get('role') != 'planner':
+        return redirect(url_for('login'))
 
-# @app.route('/planner/production_plans/add', methods=['GET', 'POST'])
-# def add_production_plan():
-#     if 'username' not in session or session.get('role') != 'planner':
-#         return redirect(url_for('login'))
+    conn = sqlite3.connect('database/4s.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-#     if request.method == 'POST':
-#         product_name = request.form['product_name']
-#         quantity = int(request.form['quantity'])
-#         schedule_date = request.form['schedule_date']
+    # Use updated_at as fulfillment timestamp
+    cursor.execute('''
+        SELECT item, 
+               AVG(julianday(updated_at) - julianday(created_at)) AS avg_turnaround
+        FROM requests
+        WHERE status = 'Fulfilled' AND updated_at IS NOT NULL
+        GROUP BY item
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
 
-#         conn = get_db_connection()
-#         cursor = conn.cursor()
-#         cursor.execute(
-#             "INSERT INTO production_plans (product_name, quantity, schedule_date) VALUES (?, ?, ?)",
-#             (product_name, quantity, schedule_date)
-#         )
-#         conn.commit()
-#         conn.close()
-#         flash('Production plan added successfully!', 'success')
-#         return redirect(url_for('production_plans'))
+    df = pd.DataFrame(rows, columns=['item', 'avg_turnaround'])
 
-#     return render_template('add_production_plan.html')
+    if df.empty:
+        flash("No Fulfilled request data found to generate chart.", "warning")
+        return redirect(url_for('planner_dashboard'))
 
-# @app.route('/planner/production_plans/edit/<int:plan_id>', methods=['GET', 'POST'])
-# def edit_production_plan(plan_id):
-#     if 'username' not in session or session.get('role') != 'planner':
-#         return redirect(url_for('login'))
+    # Generate chart
+    plt.figure(figsize=(10, 6))
+    df.set_index('item')['avg_turnaround'].sort_values().plot(kind='bar', color='mediumseagreen')
+    plt.title("Average Fulfillment Turnaround Time by Item")
+    plt.ylabel("Avg Turnaround (Days)")
+    plt.xlabel("Item")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
+    chart_path = os.path.join('static', 'avg_turnaround_chart.png')
+    plt.savefig(chart_path)
+    plt.clf()
 
-#     if request.method == 'POST':
-#         product_name = request.form['product_name']
-#         quantity = int(request.form['quantity'])
-#         schedule_date = request.form['schedule_date']
+    return render_template('planner_report.html')
 
-#         cursor.execute("""
-#             UPDATE production_plans
-#             SET product_name = ?, quantity = ?, schedule_date = ?
-#             WHERE id = ?
-#         """, (product_name, quantity, schedule_date, plan_id))
-#         conn.commit()
-#         conn.close()
-#         flash('Production plan updated successfully!', 'success')
-#         return redirect(url_for('production_plans'))
-
-#     # GET method: fetch existing plan to edit
-#     cursor.execute("SELECT * FROM production_plans WHERE id = ?", (plan_id,))
-#     plan = cursor.fetchone()
-#     conn.close()
-#     if plan is None:
-#         flash('Production plan not found.', 'danger')
-#         return redirect(url_for('production_plans'))
-
-#     return render_template('edit_production_plan.html', plan=plan)
-
-
-# @app.route('/planner/production_plans/delete/<int:plan_id>', methods=['POST'])
-# def delete_production_plan(plan_id):
-#     if 'username' not in session or session.get('role') != 'planner':
-#         return redirect(url_for('login'))
-
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-#     cursor.execute("DELETE FROM production_plans WHERE id = ?", (plan_id,))
-#     conn.commit()
-#     conn.close()
-#     flash('Production plan deleted successfully!', 'success')
-#     return redirect(url_for('production_plans'))
-
-#-------------------------------planner request-------------------------------
-# @app.route('/planner/production_plans')
-# def production_plans():
-#     if 'username' not in session or session.get('role') != 'planner':
-#         return redirect(url_for('login'))
-
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-#     cursor.execute("SELECT * FROM production_plans ORDER BY schedule_date ASC")
-#     plans = cursor.fetchall()
-#     conn.close()
-
-#     return render_template('production_plans.html', plans=plans)
-
-
-
-#--------------------------------------------------------------------------------------------
+#---------------------------------------planner update status---------------------------------------------
 
 @app.route('/planner/request/<int:req_id>/update_status', methods=['POST']) 
 def update_status(req_id):
@@ -813,7 +824,7 @@ def update_status(req_id):
                 WHERE id = ?
             """, (req_id,))
 
-            # ✅ Only increment inventory if it was not already fulfilled
+            # ✅ Only increment inventory if it was not already Fulfilled
             if old_status != 'Fulfilled':
                 cur.execute("""
                     UPDATE warehouse_inventory
@@ -848,74 +859,24 @@ def update_status(req_id):
     flash(f"✅ Request #{req_id} updated to '{new_status}'", 'success')
     return redirect(url_for('planner_dashboard'))
 
-
-
-
-from flask import session, redirect, url_for, send_file
-import io
-import pandas as pd
-import sqlite3
-from openpyxl.chart import BarChart, Reference
-
-# @app.route("/download_report", endpoint='download_reportt')
-# def download_reportt():
-#     from flask import session  # make sure session is explicitly imported
-
-#     # Debug print to confirm session
-#     print("Session:", session)
-
-#     if 'username' not in session or session.get('role') != 'planner':
-#         return redirect(url_for('login'))
-
-
-#     conn = sqlite3.connect('database/4s.db')
-#     cursor = conn.cursor()
-#     cursor.execute("SELECT * FROM requests")
-#     rows = cursor.fetchall()
-#     columns = [description[0] for description in cursor.description]
-#     conn.close()
-
-#     df = pd.DataFrame(rows, columns=columns)
-
-#     output = io.BytesIO()
-#     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-#         df.to_excel(writer, index=False, sheet_name='Requests')
-
-#         worksheet = writer.sheets['Requests']
-#         chart = BarChart()
-#         chart.title = "Item Quantity Distribution"
-#         chart.x_axis.title = "Item"
-#         chart.y_axis.title = "Quantity"
-
-#         data = Reference(worksheet, min_col=5, min_row=1, max_col=5, max_row=len(df)+1)
-#         categories = Reference(worksheet, min_col=4, min_row=2, max_row=len(df)+1)
-#         chart.add_data(data, titles_from_data=True)
-#         chart.set_categories(categories)
-#         worksheet.add_chart(chart, "E5")
-
-#     output.seek(0)
-#     return send_file(output, download_name="requests_report.xlsx", as_attachment=True)
-
-
-
-
-
-
-#--------------------------------support dashboard---------------------------------------------------
-
-
-# -------------------- Support Dashboard --------------------
-
-
+# ---------------------------- Support Dashboard -------------------------------------------
 
 # At the top of your file (global variable)
 complaints = []  # This should be a list
 
+from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages
+from datetime import datetime
+import sqlite3
+
 @app.route('/raise_complaint', methods=['GET', 'POST'])
 def raise_complaint():
+    if session.get('role') != 'sales':
+        return redirect(url_for('login'))
+
+    conn = sqlite3.connect('database/4s.db')
+    cursor = conn.cursor()
+
     if request.method == 'POST':
-        conn = sqlite3.connect('database/4s.db')
-        cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO complaints (customer_id, subject, description, created_at, status)
             VALUES (?, ?, ?, ?, 'Open')
@@ -927,8 +888,38 @@ def raise_complaint():
         ))
         conn.commit()
         conn.close()
-        return redirect(url_for('sales_dashboard'))
-    return render_template('raise_complaint.html')
+        flash("✅ Complaint submitted successfully!", "success")
+        return redirect(url_for('raise_complaint'))
+
+    # Get all customer_ids created by the logged-in user
+    cursor.execute('''
+        SELECT customer_id FROM requests
+        WHERE created_by = ?
+        ORDER BY created_at DESC
+    ''', (session['username'],))
+    rows = cursor.fetchall()
+    customer_ids = [row[0] for row in rows]
+
+    conn.close()
+    return render_template('raise_complaint.html', customer_ids=customer_ids)
+
+
+    # ✅ Get latest customer_id created by this user
+    conn = sqlite3.connect('database/4s.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT customer_id FROM requests
+        WHERE created_by = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+    ''', (session['username'],))
+    row = cursor.fetchone()
+    customer_id = row[0] if row else ''
+
+    conn.close()
+
+    return render_template('raise_complaint.html', customer_id=customer_id)
+
 
 
 
@@ -971,72 +962,39 @@ def respond_complaint(complaint_id):
 def resolved_dashboard():
     return render_template('resolved_dashboard.html', complaints=resolved_complaints)
 
+@app.route('/resolved_complaints')
+def resolved_complaints():
+    if session.get('role') != 'sales':
+        return redirect(url_for('login'))
+
+    conn = sqlite3.connect('database/4s.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM complaints")
+    rows = cursor.fetchall()
+    resolved_requests = [dict(r) for r in rows]
+
+    conn.close()
+    return render_template('resolved_complaints.html', resolved_requests=resolved_requests)
 
 
-# @app.route('/support_dashboard')
-# def support_dashboard():
-#     if session.get('role') != 'support':
-#         return redirect(url_for('login'))
+@app.route('/delete_complaint/<int:complaint_id>', methods=['POST'])
+def delete_complaint(complaint_id):
+    if session.get('role') != 'sales':
+        return redirect(url_for('login'))
 
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-#     cursor.execute("SELECT * FROM requests")
-#     requests = cursor.fetchall()
-#     conn.close()
-
-#     return render_template('support_dashboard.html', requests=requests)
-
-# # -------------------- Update Request Status --------------------
-# @app.route('/update_status/<int:request_id>', methods=['GET', 'POST'])
-# def update_support_status(request_id):
-#     if session.get('role') != 'support':
-#         return redirect(url_for('login'))
-
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-
-#     if request.method == 'POST':
-#         new_status = request.form['status']
-#         comment = request.form['comment']
-#         updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-#         cursor.execute('''
-#             UPDATE requests
-#             SET status = ?, warehouse_comment = ?, updated_at = ?
-#             WHERE id = ?
-#         ''', (new_status, comment, updated_at, request_id))
-
-#         conn.commit()
-#         conn.close()
-#         return redirect(url_for('support_dashboard'))
-
-#     cursor.execute("SELECT * FROM requests WHERE id = ?", (request_id,))
-#     req = cursor.fetchone()
-#     conn.close()
-
-#     return render_template('update_support_status.html', req=req)
-
-# # -------------------- Mark as Completed --------------------
-# @app.route('/mark_completed/<int:request_id>')
-# def mark_completed(request_id):
-#     if session.get('role') != 'support':
-#         return redirect(url_for('login'))
-
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-
-#     cursor.execute('''
-#         UPDATE requests
-#         SET status = 'Completed', updated_at = ?
-#         WHERE id = ?
-#     ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), request_id))
-
-#     conn.commit()
-#     conn.close()
-#     return redirect(url_for('support_dashboard'))
+    conn = sqlite3.connect('database/4s.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM complaints WHERE id = ? AND status = 'Resolved'", (complaint_id,))
+    conn.commit()
+    conn.close()
+    flash("🗑️ Complaint deleted successfully.", "success")
+    return redirect(url_for('resolved_complaints'))
 
 
 # -------------------- Logout --------------------
+
 @app.route('/logout')
 def logout():
     session.clear()
