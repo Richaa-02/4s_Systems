@@ -161,6 +161,8 @@
           <th>Item</th>
           <th>Available Quantity</th>
           <th>Update Stock</th>
+          <th>Delete</th>
+
         </tr>
       </thead>
       <tbody>
@@ -176,6 +178,13 @@
               <button type="submit" class="btn btn-update">Update</button>
             </form>
           </td>
+          <td>
+  <form method="POST" action="{{ url_for('delete_inventory_item') }}">
+    <input type="hidden" name="item_id" value="{{ item[0] }}">
+    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this item?');">Delete</button>
+  </form>
+</td>
+
         </tr>
         {% else %}
         <tr>
@@ -185,6 +194,20 @@
       </tbody>
     </table>
   </div>
+    <hr>
+  <h5>Add New Item</h5>
+  <form method="POST" class="row g-3">
+    <div class="col-md-5">
+      <input type="text" name="new_item" class="form-control form-control-sm" placeholder="Item name" required>
+    </div>
+    <div class="col-md-3">
+      <input type="number" name="new_quantity" class="form-control form-control-sm" placeholder="Initial quantity" required>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" name="action" value="add" class="btn btn-primary btn-sm">➕ Add Item</button>
+    </div>
+  </form>
+
 
   <div class="note">ℹ️ Use positive numbers to increase, negative to decrease stock.</div>
 </div>

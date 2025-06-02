@@ -578,35 +578,69 @@ def delete_shipped_request(request_id):
     return redirect(url_for('warehouse_dashboard'))
 
 # -------------------------- Warehouse Stock -------------------------------------------
-
 @app.route('/warehouse_stock', methods=['GET', 'POST'])
 def warehouse_stock():
     conn = sqlite3.connect('database/4s.db')
     cursor = conn.cursor()
 
     if request.method == 'POST':
-        item = request.form['item']
-        quantity_change = int(request.form['quantity'])
+        if request.form.get('action') == 'add':
+            # Add new item logic
+            new_item = request.form['new_item'].strip().lower()
+            try:
+                new_quantity = int(request.form['new_quantity'])
+            except ValueError:
+                flash('Invalid quantity for new item.', 'danger')
+                return redirect(url_for('warehouse_stock'))
 
-        # Check if item exists
-        cursor.execute("SELECT item_quantity FROM warehouse_inventory WHERE item = ?", (item,))
-        row = cursor.fetchone()
-
-        if row:
-            new_quantity = row[0] + quantity_change
-            if new_quantity < 0:
-                flash('Quantity cannot be negative.', 'danger')
+            # Check if item already exists
+            cursor.execute("SELECT * FROM warehouse_inventory WHERE LOWER(item) = ?", (new_item,))
+            if cursor.fetchone():
+                flash(f'Item "{new_item}" already exists.', 'warning')
             else:
-                cursor.execute("UPDATE warehouse_inventory SET item_quantity = ? WHERE item = ?", (new_quantity, item))
+                cursor.execute("INSERT INTO warehouse_inventory (item, item_quantity) VALUES (?, ?)",
+                               (new_item, new_quantity))
                 conn.commit()
-                flash(f'Stock updated successfully. New quantity of "{item}": {new_quantity}', 'success')
+                flash(f'New item "{new_item}" added with quantity {new_quantity}.', 'success')
         else:
-            flash(f'Item "{item}" not found in inventory.', 'warning')
+            # Stock update logic
+            item = request.form['item']
+            quantity_change = int(request.form['quantity'])
+
+            cursor.execute("SELECT item_quantity FROM warehouse_inventory WHERE item = ?", (item,))
+            row = cursor.fetchone()
+
+            if row:
+                new_quantity = row[0] + quantity_change
+                if new_quantity < 0:
+                    flash('Quantity cannot be negative.', 'danger')
+                else:
+                    cursor.execute("UPDATE warehouse_inventory SET item_quantity = ? WHERE item = ?", (new_quantity, item))
+                    conn.commit()
+                    flash(f'Stock updated successfully. New quantity of "{item}": {new_quantity}', 'success')
+            else:
+                flash(f'Item "{item}" not found in inventory.', 'warning')
 
     cursor.execute("SELECT id, item, item_quantity FROM warehouse_inventory")
     stock_data = cursor.fetchall()
     conn.close()
     return render_template('warehouse_stock.html', stock=stock_data)
+
+
+#-----------------------------delete stock item---------------------------------------------
+
+@app.route('/warehouse_stock/delete', methods=['POST'])
+def delete_inventory_item():
+    item_id = request.form['item_id']
+
+    with sqlite3.connect('database/4s.db') as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM warehouse_inventory WHERE id = ?", (item_id,))
+        conn.commit()
+
+    flash(f"Item ID {item_id} deleted successfully.", 'success')
+    return redirect(url_for('warehouse_stock'))
+
 
 #---------------------------- Warehouse Forwarded Requests ---------------------------------------------
 
